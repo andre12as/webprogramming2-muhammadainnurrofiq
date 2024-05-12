@@ -2,10 +2,8 @@
 
 class Autentifikasi extends CI_Controller
 {
-
     public function index()
     {
-        // Jika statusnya sudah login, maka tidak bisa mengakses halaman login alias dikembalikan ke tampilan user
         if ($this->session->userdata('email')) {
             redirect('user');
         }
@@ -17,10 +15,10 @@ class Autentifikasi extends CI_Controller
         $this->form_validation->set_rules('password', 'Password', 'required|trim', [
             'required' => 'Password Harus diisi'
         ]);
+
         if ($this->form_validation->run() == false) {
             $data['judul'] = 'Login';
             $data['user'] = '';
-            // Kata 'login' merupakan nilai dari variabel judul dalam array $data dikirimkan ke view aute_header
             $this->load->view('templates/aute_header', $data);
             $this->load->view('autentifikasi/login');
             $this->load->view('templates/aute_footer');
@@ -33,14 +31,10 @@ class Autentifikasi extends CI_Controller
     {
         $email = htmlspecialchars($this->input->post('email', true));
         $password = $this->input->post('password', true);
-
         $user = $this->ModelUser->cekData(['email' => $email])->row_array();
 
-        // Jika usernya ada
         if ($user) {
-            // Jika user sudah aktif
             if ($user['is_active'] == 1) {
-                // Cek password
                 if (password_verify($password, $user['password'])) {
                     $data = [
                         'email' => $user['email'],
@@ -70,5 +64,61 @@ class Autentifikasi extends CI_Controller
             redirect('autentifikasi');
         }
     }
-}
 
+    public function blok() 
+    { 
+        $this->load->view('autentifikasi/blok'); 
+    } 
+
+    public function gagal() 
+    { 
+        $this->load->view('autentifikasi/gagal'); 
+    }
+
+    public function registrasi()
+    {
+        if ($this->session->userdata('email')) {
+            redirect('user');
+        }
+
+        $this->form_validation->set_rules('nama', 'Nama Lengkap', 'required', [
+            'required' => 'Nama Belum diisi!!'
+        ]);
+
+        $this->form_validation->set_rules('email', 'Alamat Email', 'required|trim|valid_email|is_unique[user.email]', [
+            'valid_email' => 'Email Tidak Benar!!',
+            'required' => 'Email Belum diisi!!',
+            'is_unique' => 'Email Sudah Terdaftar!'
+        ]);
+
+        $this->form_validation->set_rules('password1', 'Password', 'required|trim|min_length[3]|matches[password2]', [
+            'matches' => 'Password Tidak Sama!!',
+            'min_length' => 'Password Terlalu Pendek'
+        ]);
+
+        $this->form_validation->set_rules('password2', 'Repeat Password', 'required|trim|matches[password1]');
+
+        if ($this->form_validation->run() == false) {
+            $data['judul'] = 'Registrasi Member';
+            $this->load->view('templates/aute_header', $data);
+            $this->load->view('autentifikasi/registrasi');
+            $this->load->view('templates/aute_footer');
+        } else {
+            $email = $this->input->post('email', true);
+            $data = [
+                'nama' => htmlspecialchars($this->input->post('nama', true)),
+                'email' => htmlspecialchars($email),
+                'image' => 'default.jpg',
+                'password' => password_hash($this->input->post('password1'), PASSWORD_DEFAULT),
+                'role_id' => 2,
+                'is_active' => 0,
+                'tanggal_input' => time()
+            ];
+
+            $this->ModelUser->simpanData($data);
+
+            $this->session->set_flashdata('pesan', '<div class="alert alert-success alert-message" role="alert">Selamat!! Akun member anda sudah dibuat. Silahkan Aktivasi Akun anda</div>');
+            redirect('autentifikasi');
+        }
+    }
+}
